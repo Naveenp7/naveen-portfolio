@@ -661,6 +661,31 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script>
+        document.getElementById('contactForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const name = document.getElementById('name').value;
+            const email = document.getElementById('email').value;
+            const message = document.getElementById('message').value;
+            const statusMessage = document.getElementById('statusMessage');
+            
+            const mailtoLink = mailto:naveen830navi@gmail.com?subject=Portfolio Contact from ${name}&body=${message}%0A%0AReply to: ${email};
+            
+            try {
+                window.location.href = mailtoLink;
+                
+                statusMessage.textContent = 'Email client opened! If it didn\'t open, please email me directly.';
+                statusMessage.className = 'status-message success';
+                statusMessage.style.display = 'block';
+                
+                document.getElementById('contactForm').reset();
+            } catch (error) {
+                statusMessage.textContent = 'Something went wrong. Please try again or email me directly.';
+                statusMessage.className = 'status-message error';
+                statusMessage.style.display = 'block';
+                console.error('Error:', error);
+            }
+        });
     // Initialize Three.js scene
         const scene = new THREE.Scene();
     
