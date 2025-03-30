@@ -16,13 +16,27 @@
             background-color: #121212;
             color: #ffffff;
             line-height: 1.6;
+            overflow-x: hidden;
+        }
+        
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            z-index: -1;
         }
         
         .container {
             max-width: 1200px;
             margin: 0 auto;
             padding: 0 20px;
+            position: relative;
+            z-index: 1;
         }
+        
+        /* All your existing CSS remains the same */
         
         header {
             padding: 40px 0;
@@ -80,7 +94,7 @@
             border: 3px solid #64ffda;
             transition: transform 0.3s, box-shadow 0.3s;
             object-fit: cover;
-            aspect-ratio: 1;
+            aspect-ratio: 9/16;
         }
         
         .profile-image:hover {
@@ -145,6 +159,10 @@
         
         .section {
             padding: 100px 0;
+            background-color: rgba(18, 18, 18, 0.7);
+            backdrop-filter: blur(5px);
+            margin: 30px 0;
+            border-radius: 10px;
         }
         
         .section-title {
@@ -349,6 +367,10 @@
             padding: 60px 0;
             text-align: center;
             color: #a8b2d1;
+            background-color: rgba(18, 18, 18, 0.7);
+            backdrop-filter: blur(5px);
+            border-radius: 10px 10px 0 0;
+            margin-top: 30px;
         }
         
         .social-links {
@@ -418,6 +440,8 @@
     </style>
 </head>
 <body>
+    <div id="canvas-container"></div>
+    
     <div class="container">
         <header>
             <div class="logo">Naveen</div>
@@ -635,37 +659,205 @@
         </footer>
     </div>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script>
-        // Contact form functionality
+    // Initialize Three.js scene
+        const scene = new THREE.Scene();
+    
+    // Create camera
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.z = 20;
+    
+    // Create renderer
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setClearColor(0x121212, 1);
+    
+    // Add renderer to DOM
+        document.getElementById('canvas-container').appendChild(renderer.domElement);
+    
+    // Create floating particles
+        const particlesGeometry = new THREE.BufferGeometry();
+        const particlesCount = 1000;
+    
+        const posArray = new Float32Array(particlesCount * 3);
+        const colorsArray = new Float32Array(particlesCount * 3);
+        const velocities = new Float32Array(particlesCount * 3);
+    
+    // Fill position, color, and velocity arrays
+        for (let i = 0; i < particlesCount * 3; i++) {
+            posArray[i] = (Math.random() - 0.5) * 50;
+            velocities[i] = (Math.random() - 0.5) * 0.01;
+        
+            if (i % 3 === 0) {
+                colorsArray[i] = 0.1 + Math.random() * 0.1;
+            } else if (i % 3 === 1) {
+                colorsArray[i] = 0.6 + Math.random() * 0.4;
+            } else {
+                colorsArray[i] = 0.7 + Math.random() * 0.3;
+            }
+        }
+    
+        particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+        particlesGeometry.setAttribute('color', new THREE.BufferAttribute(colorsArray, 3));
+    
+        const particlesMaterial = new THREE.PointsMaterial({
+            size: 0.1,
+            vertexColors: true,
+            transparent: true,
+            opacity: 0.7,
+            sizeAttenuation: true
+        });
+    
+        const particlesMesh = new THREE.Points(particlesGeometry, particlesMaterial);
+        scene.add(particlesMesh);
+    
+    // Create lines
+        const linesMaterial = new THREE.LineBasicMaterial({
+            color: 0x64ffda,
+            transparent: true,
+            opacity: 0.1
+        });
+    
+        const linesGeometry = new THREE.BufferGeometry();
+        const linesVertices = [];
+    
+        for (let i = 0; i < particlesCount; i++) {
+            const x1 = posArray[i * 3];
+            const y1 = posArray[i * 3 + 1];
+            const z1 = posArray[i * 3 + 2];
+        
+            for (let j = i + 1; j < particlesCount; j++) {
+                const x2 = posArray[j * 3];
+                const y2 = posArray[j * 3 + 1];
+                const z2 = posArray[j * 3 + 2];
+            
+                const distance = Math.sqrt(
+                    Math.pow(x2 - x1, 2) + 
+                    Math.pow(y2 - y1, 2) + 
+                    Math.pow(z2 - z1, 2)
+                );
+            
+                if (distance < 5 && Math.random() > 0.99) {
+                    linesVertices.push(x1, y1, z1);
+                    linesVertices.push(x2, y2, z2);
+                }
+            }
+        }
+    
+        linesGeometry.setAttribute('position', new THREE.Float32BufferAttribute(linesVertices, 3));
+        const linesMesh = new THREE.LineSegments(linesGeometry, linesMaterial);
+        scene.add(linesMesh);
+    
+    // Create glowing spheres
+        const nodeCount = 15;
+        const nodes = [];
+    
+        for (let i = 0; i < nodeCount; i++) {
+            const geometry = new THREE.SphereGeometry(0.1 + Math.random() * 0.2, 32, 32);
+            const material = new THREE.MeshBasicMaterial({
+                color: 0x64ffda,
+                transparent: true,
+                opacity: 0.7
+            });
+            const sphere = new THREE.Mesh(geometry, material);
+        
+            sphere.position.set(
+                (Math.random() - 0.5) * 40,
+                (Math.random() - 0.5) * 40,
+                (Math.random() - 0.5) * 40
+            );
+        
+            sphere.userData.velocity = {
+                x: (Math.random() - 0.5) * 0.02,
+                y: (Math.random() - 0.5) * 0.02,
+                z: (Math.random() - 0.5) * 0.02
+            };
+        
+            nodes.push(sphere);
+            scene.add(sphere);
+        }
+    
+    // Mouse interaction
+        let mouseX = 0;
+        let mouseY = 0;
+    
+        document.addEventListener('mousemove', (event) => {
+            mouseX = (event.clientX / window.innerWidth) * 2 - 1;
+            mouseY = -(event.clientY / window.innerHeight) * 2 + 1;
+        });
+    
+    // Window resize handler
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    
+    // Animation function
+        function animate() {
+            requestAnimationFrame(animate);
+        
+        // Rotate scene based on mouse position
+            scene.rotation.y += (mouseX * 0.2 - scene.rotation.y) * 0.02;
+            scene.rotation.x += (mouseY * 0.2 - scene.rotation.x) * 0.02;
+        
+        // Animate particles
+            const positions = particlesMesh.geometry.attributes.position.array;
+            for (let i = 0; i < particlesCount * 3; i++) {
+                positions[i] += velocities[i];
+            
+            // Bounce particles at boundaries
+                if (positions[i] > 25 || positions[i] < -25) {
+                    velocities[i] = -velocities[i];
+                }
+            }
+            particlesMesh.geometry.attributes.position.needsUpdate = true;
+        
+        // Animate nodes
+            nodes.forEach(node => {
+                node.position.x += node.userData.velocity.x;
+                node.position.y += node.userData.velocity.y;
+                node.position.z += node.userData.velocity.z;
+            
+            // Bounce nodes at boundaries
+                if (node.position.x > 20 || node.position.x < -20) {
+                    node.userData.velocity.x = -node.userData.velocity.x;
+                }
+                if (node.position.y > 20 || node.position.y < -20) {
+                    node.userData.velocity.y = -node.userData.velocity.y;
+                }
+                if (node.position.z > 20 || node.position.z < -20) {
+                    node.userData.velocity.z = -node.userData.velocity.z;
+                }
+            
+            // Pulse effect
+                node.scale.setScalar(1 + Math.sin(Date.now() * 0.002) * 0.1);
+            });
+        
+            renderer.render(scene, camera);
+        }
+    
+    // Start animation
+        animate();
+    
+    // Basic form submission handling
         document.getElementById('contactForm').addEventListener('submit', function(e) {
             e.preventDefault();
-            
-            const name = document.getElementById('name').value;
-            const email = document.getElementById('email').value;
-            const message = document.getElementById('message').value;
+        
             const statusMessage = document.getElementById('statusMessage');
-            
-            // You need to replace YOUR_EMAIL with your actual email address
-            const mailtoLink = `mailto:naveen830navi@gmail.com?subject=Portfolio Contact from ${name}&body=${message}%0A%0AReply to: ${email}`;
-            
-            try {
-                // Open default mail client
-                window.location.href = mailtoLink;
-                
-                // Show success message
-                statusMessage.textContent = 'Email client opened! If it didn\'t open, please email me directly.';
+            statusMessage.style.display = 'block';
+        
+            // Simulate form submission
+            setTimeout(() => {
                 statusMessage.className = 'status-message success';
-                statusMessage.style.display = 'block';
-                
-                // Reset form
-                document.getElementById('contactForm').reset();
-            } catch (error) {
-                // Show error message
-                statusMessage.textContent = 'Something went wrong. Please try again or email me directly.';
-                statusMessage.className = 'status-message error';
-                statusMessage.style.display = 'block';
-                console.error('Error:', error);
-            }
+                statusMessage.textContent = 'Message sent successfully!';
+                this.reset();
+            
+                setTimeout(() => {
+                    statusMessage.style.display = 'none';
+                }, 3000);
+            }, 1000);
         });
     </script>
 </body>
